@@ -1,0 +1,29 @@
+name: RDP with Tailscale
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: windows-latest   # Gunakan Windows runner
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Tailscale
+      run: |
+        msiexec /i https://pkgs.tailscale.com/stable/tailscale-setup-latest-amd64.msi /quiet
+        setx PATH "%PATH%;C:\Program Files (x86)\Tailscale IPN"
+    
+    - name: Authenticate Tailscale
+      env:
+        TAILSCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
+      run: |
+        "C:\Program Files (x86)\Tailscale IPN\tailscale.exe" up --authkey %TAILSCALE_AUTH_KEY% --hostname github-rdp --accept-routes --accept-dns
+    
+    - name: Enable RDP
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Write-Output "RDP Enabled on this runner. Use your Tailscale IP."
